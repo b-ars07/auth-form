@@ -1,0 +1,8 @@
+{
+  "auth": {
+    "title": "Authorization",
+    "phone": "Phone number",
+    "phonePlaceholder": "Enter phone number",
+    "submit": "Submit"
+  }
+}
