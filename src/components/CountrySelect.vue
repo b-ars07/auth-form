@@ -1,89 +1,77 @@
 <template>
-  <div class="country-container">
-    <!-- Селектор страны -->
+  <div>
+    <!-- Выпадающий селектор страны -->
     <div class="country-select" @click="toggleDropdown">
-      <label for="country">{{ selectedCountry ? selectedCountry.name : $t('auth.country') }}</label>
+      <label for="country">{{ selectedCountry ? selectedCountry.label : $t('auth.country') }}</label>
       <span class="dropdown-arrow">▼</span>
     </div>
 
-    <!-- Выпадающий список с поиском и странами -->
-    <div v-if="dropdownOpen" class="dropdown">
-      <!-- Строка поиска появляется только при открытии списка -->
-      <input
-          type="text"
-          v-model="search"
-          placeholder="Поиск"
-          class="search-input"
-      />
-      <ul class="country-list">
-        <li
-            v-for="country in filteredCountries"
-            :key="country.code"
-            @click="selectCountry(country)"
-            class="country-item"
-        >
-          {{ country.flag }} {{ country.name }} ({{ country.dial_code }})
-        </li>
-      </ul>
-    </div>
+    <!-- Компонент BaseSelect для выбора страны -->
+    <BaseSelect
+        :options="countryOptions"
+        :isOpen="dropdownOpen"
+        enableSearch
+        @select="selectCountry"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'; // Убираем toRaw
-import { Country } from '../types/countryTypes';
+import { ref, onMounted } from 'vue';
+import BaseSelect from '@/components/BaseSelect.vue';
 
-// Состояние поиска и выпадающего списка
-const search = ref<string>('');
-const dropdownOpen = ref<boolean>(false);
+// Определение пропсов и событий
+const props = defineProps<{
+  modelValue: { dial_code: string; label: string; name: string; index: number } | null;
+}>();
 
-// Состояние для хранения списка стран
-const countries = ref<Country[]>([]);
-const selectedCountry = ref<Country | null>(null);
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: { dial_code: string; label: string; name: string; index: number } | null): void;
+}>();
 
-// Загрузка списка стран из API
+// Состояния
+const dropdownOpen = ref(false);
+const selectedCountry = ref(props.modelValue);
+const countryOptions = ref<{ dial_code: string; label: string; name: string; index: number }[]>([]);
+
+// Загрузка списка стран и установка страны по умолчанию
 onMounted(async () => {
   try {
     const response = await fetch(
         'https://gist.githubusercontent.com/DmytroLisitsyn/1c31186e5b66f1d6c52da6b5c70b12ad/raw/2bc71083a77106afec2ec37cf49d05ee54be1a22/country_dial_info.json'
     );
-    countries.value = await response.json();
+    const countries = await response.json();
+    countryOptions.value = countries.map((country: any, index: number) => ({
+      dial_code: country.dial_code,
+      label: `${country.flag} ${country.name} (${country.dial_code})`,
+      name: country.name,
+      index,
+    }));
 
-    // Установка страны по умолчанию
-    selectedCountry.value = countries.value.find(country => country.code === 'RU') || null;
+    // Устанавливаем страну по умолчанию — Россия
+    if (!selectedCountry.value) {
+      selectedCountry.value = countryOptions.value.find((country) => country.name === 'Russia') || countryOptions.value[0];
+      emit('update:modelValue', selectedCountry.value);
+    }
   } catch (error) {
-    console.error('Ошибка при загрузке стран:', error);
+    console.error('Ошибка при загрузке списка стран:', error);
   }
 });
 
-// Фильтр списка стран на основе поиска
-const filteredCountries = computed(() =>
-    countries.value.filter(country =>
-        country.name.toLowerCase().includes(search.value.toLowerCase())
-    )
-);
-
-// Переключение состояния выпадающего списка
+// Открытие и закрытие выпадающего списка
 const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value;
 };
 
-// Выбор страны
-const selectCountry = (country: Country) => {
-  console.log(country)
+// Функция для выбора страны
+const selectCountry = (country: { dial_code: string; label: string; name: string; index: number }) => {
   selectedCountry.value = country;
-  dropdownOpen.value = false; // Закрытие списка после выбора
+  dropdownOpen.value = false;
+  emit('update:modelValue', country); // Эмитируем событие для обновления модели в родительском компоненте
 };
 </script>
 
 <style scoped>
-/* Контейнер для селектора страны */
-.country-container {
-  position: relative;
-  width: 100%;
-}
-
-/* Основной селектор страны */
 .country-select {
   display: flex;
   justify-content: space-between;
@@ -92,51 +80,10 @@ const selectCountry = (country: Country) => {
   border: 1px solid #ddd;
   border-radius: 8px;
   cursor: pointer;
+  position: relative;
 }
 
-.selected-country {
-  font-size: 14px;
-}
-
-/* Стрелка для dropdown */
 .dropdown-arrow {
-  font-size: 14px;
-}
-
-/* Выпадающий список */
-.dropdown {
-  position: absolute;
-  width: 100%;
-  max-width: 360px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  z-index: 10;
-  margin-top: 8px;
-}
-
-/* Поле поиска */
-.search-input {
-  width: 100%;
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-  box-sizing: border-box;
-}
-
-/* Список стран */
-.country-list {
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-}
-
-.country-item {
-  padding: 10px;
-  cursor: pointer;
-  border-bottom: 1px solid #ddd;
-}
-
-.country-item:hover {
-  background-color: #f5f5f5;
+  margin-left: 10px;
 }
 </style>

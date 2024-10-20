@@ -1,6 +1,5 @@
-
-export interface Country {
-    dial_code: string;
+export interface LanguageOption {
+    value: string;
     label: string;
     name: string;
     index: number;

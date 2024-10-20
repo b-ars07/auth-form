@@ -3,6 +3,7 @@
     "title": "Authorization",
     "phone": "Phone number",
     "phonePlaceholder": "Enter phone number",
-    "submit": "Submit"
+    "submit": "Submit",
+    "subtitle": "By clicking on the button, you agree to the terms of use of the site"
   }
 }
